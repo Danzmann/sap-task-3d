@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Leva, useControls } from 'leva';
@@ -8,9 +8,31 @@ const App: React.FC = () => {
   const [numBoxes, setNumBoxes] = useState(12);
   const [radius, setRadius] = useState(10);
   const [numCircles, setNumCircles] = useState(3);
+  const [autoChange, setAutoChange] = useState(false);
 
-  // Leva controls for user input
-  useControls({
+  const maxCircles = 40;
+  const minCircles = 0;
+
+  // Handle the auto-increasing and decreasing of circles
+  useEffect(() => {
+    if (!autoChange) return;
+
+    let increment = 1;
+    const interval = setInterval(() => {
+      setNumCircles((prev) => {
+        if (prev >= maxCircles) increment = -1; // Decreasing
+        if (prev <= minCircles) increment = 1; // Increasing
+
+        const newValue = prev + increment;
+        set({ 'Number of Circles': newValue }); // Update the slider programmatically
+        return newValue;
+      });
+    }, 300);
+
+    return () => clearInterval(interval); // Clean up the interval when autoChange is off
+  }, [autoChange]);
+
+  const [_, set] = useControls(() => ({
     'Number of Boxes': {
       value: numBoxes,
       min: 3,
@@ -27,12 +49,18 @@ const App: React.FC = () => {
     },
     'Number of Circles': {
       value: numCircles,
-      min: 1,
-      max: 40,
+      min: minCircles,
+      max: maxCircles,
       step: 1,
-      onChange: (value) => setNumCircles(value),
+      onChange: (value) => {
+        if (!autoChange) setNumCircles(value);
+      },
     },
-  });
+    'Auto Change': {
+      value: autoChange,
+      onChange: (value) => setAutoChange(value),
+    },
+  }));
 
   return (
     <>
@@ -47,7 +75,7 @@ const App: React.FC = () => {
       >
         <ambientLight intensity={0.2} />
         <directionalLight
-          position={[50, 20, 15]}
+          position={[50, 20, 20]}
           intensity={1}
           castShadow
           shadow-mapSize-width={2048}

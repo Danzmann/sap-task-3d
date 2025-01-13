@@ -1,22 +1,49 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { GroupProps, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+
+import { ROTATE_SPEED } from '../utils/constants.tsx';
+import RotatingBox from './RotatingBox.tsx';
 
 interface CircleProps extends GroupProps {
   radius: number;
   numBoxes: number;
 }
 
-const ROTATE_SPEED = 0.005;
-
 const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
   const groupRef = useRef<THREE.Group>();
+  const [hovered, setHovered] = useState(false);
+  const [currentSpeed, setCurrentSpeed] = useState(ROTATE_SPEED); // Dynamic rotation speed
+  const [targetRotation, setTargetRotation] = useState<number | null>(null); // Target rotation for jumping
 
   useFrame(() => {
     if (groupRef.current) {
-      groupRef.current.rotation.z += ROTATE_SPEED;
+      if (!hovered && targetRotation === null) {
+        groupRef.current.rotation.z += currentSpeed;
+      } else if (targetRotation !== null) {
+        groupRef.current.rotation.z += currentSpeed;
+
+        if (
+          (currentSpeed > 0 && groupRef.current.rotation.z >= targetRotation) ||
+          (currentSpeed < 0 && groupRef.current.rotation.z <= targetRotation)
+        ) {
+          setCurrentSpeed(ROTATE_SPEED); // Reset speed to normal
+          setTargetRotation(null); // Stop the jump
+        }
+      }
     }
   });
+
+  const handleClick = () => {
+    if (groupRef.current) {
+      const currentRotation = groupRef.current.rotation.z;
+      const jumpAngle = (2 * Math.PI) / 3; // 1/3 of a full circle at each click
+      const newTarget = currentRotation + jumpAngle;
+
+      setTargetRotation(newTarget);
+      setCurrentSpeed(ROTATE_SPEED * 20);
+    }
+  };
 
   const baseColor = useMemo(
     () => new THREE.Color(Math.random(), Math.random(), Math.random()),
@@ -44,50 +71,25 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
   }, [radius, numBoxes, baseColor]);
 
   return (
-    <group ref={groupRef} {...props}>
+    <group
+      ref={groupRef}
+      scale={hovered ? 1.1 : 1}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+      onPointerDown={handleClick} // Trigger the jump on click
+      {...props}
+    >
       {boxes.map(({ position, color, delay }, index) => (
         <RotatingBox
           key={index}
           position={position}
           color={color}
           delay={delay}
+          onHoverStart={() => setHovered(true)}
+          onHoverEnd={() => setHovered(false)}
         />
       ))}
     </group>
-  );
-};
-
-interface RotatingBoxProps {
-  position: [number, number, number];
-  color: THREE.Color;
-  delay: number;
-}
-
-const RotatingBox: React.FC<RotatingBoxProps> = ({
-  position,
-  color,
-  delay,
-}) => {
-  console.log(delay);
-  const boxRef = useRef<THREE.Mesh>();
-  const scale = useRef(0);
-
-  useFrame((_, delta) => {
-    if (boxRef.current) {
-      // Introduce a delay before starting the scale animation
-      const elapsedTime = THREE.MathUtils.clamp(delta - delay, 0, 1);
-      scale.current = THREE.MathUtils.lerp(scale.current, 1, elapsedTime);
-      boxRef.current.scale.set(scale.current, scale.current, scale.current);
-
-      boxRef.current.rotation.z += ROTATE_SPEED;
-    }
-  });
-
-  return (
-    <mesh ref={boxRef} position={position} castShadow>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={color} />
-    </mesh>
   );
 };
 
