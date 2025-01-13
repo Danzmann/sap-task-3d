@@ -1,50 +1,91 @@
-# React + TypeScript + Vite
+# 3D Rotating Circles Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a React-based 3D application that renders a cylinder-like structure of rotating circles, where each circle consists of evenly spaced, independently rotating boxes. The project uses **React Three Fiber** for 3D rendering and includes interactive features such as hover effects, dynamic box/circle controls, and a "jump" functionality for smooth animations.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dynamic Cylinder Structure**: The number of circles, boxes per circle, and radius can be adjusted via controls.
+- **Interactive Hover and Click Effects**: Stop rotation on hover and jump rotation on click.
+- **Animation**: Smooth transitions for adding boxes and circles.
+- **Responsive Controls**: Built-in GUI using Leva for easy parameter adjustments.
 
-## Expanding the ESLint configuration
+## Main Technologies Used
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **React with Vite**
+- **React Three Fiber (with Three.js)**
+- **Leva** (for GUI controls)
 
-- Configure the top-level `parserOptions` property like this:
+## Installation
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:Danzmann/sap-task-3d.git
+   cd sap-task-3d
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open your browser and navigate to:
+   ```
+   http://localhost:5174
+   ```
+   or the port in which vite opened your local dev app
+
+## File Structure
+
+```plaintext
+src/
+├── components/
+│   ├── Circle.tsx         # Circle component with interactive rotation and hover effects
+│   ├── RotatingBox.tsx    # Box component for individual rotation
+├── utils/
+    ├── boxesGenerator.ts  # Utility function for calculation the creation of each box in a circle
+    ├── constants.ts       # Constants for configurations used across the app
+    ├── getEnv.ts          # Get environment variables
+├── App.tsx                # Main app entry point
+├── index.tsx              # React DOM entry point
+├── App.css                # Global styles
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## Usage
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react';
+### Controls
+- **Number of Boxes**: Adjust the number of boxes per circle.
+- **Radius**: Modify the radius of the circles.
+- **Number of Circles**: Change the number of stacked circles.
+- **Auto Change**: Automatically increase/decrease the number of circles in a loop.
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-});
-```
+### Interaction
+- **Hover**: Scale the circle up and stop its rotation.
+- **Click**: Rotate the circle forward by 1/3 of a full circle.
+
+## Performance
+
+- Monitoring: r3f-perf is used for monitoring rendering stats.
+- Calculations: Expensive calculations and components are memoized and frequent user events debounced.
+- Pixel ratio: Devices with limited GPU computation have reduced rendering resolution.
+- Low Quality Switch: In the leva controls the user can switch on low quality mode with basic mesh instead of standard
+
+## Future Improvements
+- Implement smooth acceleration and deceleration for the jump functionality. 
+- Add animations for boxes disappearing.
+  - The animation for disappearing would require changes to the code to handle logic being executed
+  before the unmount of the component. It's a bit lenghty and tricky so decided to keep it out of this initial version.
+- Include more advanced lighting and shadows.
+- Performance:
+  - Instanced rendering: Performance can be greatly increased for large number of boxes by using this approahc which would
+  draw multiple boxes in a single draw call. The reason it is not implemented is due to the need to redo the logic for boxes adding/removing animation,
+   and the onHover effects, would be a bit of lengthy work so I leave it for the next version.
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE.md).
+
