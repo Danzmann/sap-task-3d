@@ -23,18 +23,22 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
     [],
   );
 
-  // Generate positions and colors for the boxes
+  // Generate positions and (smoothly transitioning :D ) colors for the boxes
   const boxes = useMemo(() => {
     return Array.from({ length: numBoxes }, (_, i) => {
       const angle = (i / numBoxes) * Math.PI * 2;
       const position = [
         Math.cos(angle) * radius,
         Math.sin(angle) * radius,
-        0, // Needed for flat cirlce
+        0, // needed for flat cirlce
       ];
+
+      // Instead of a flat progression, I use a sinusoidal function for a smooth lightness transitions
+      const lightness = 0.5 + 0.4 * Math.sin((i / numBoxes) * Math.PI * 2);
       const shade = baseColor
         .clone()
-        .offsetHSL(0, 0, Math.random() * 0.2 - 0.1);
+        .setHSL(baseColor.getHSL({}).h, 0.8, lightness);
+
       return { position, color: shade };
     });
   }, [radius, numBoxes, baseColor]);
@@ -63,7 +67,7 @@ const RotatingBox: React.FC<RotatingBoxProps> = ({ position, color }) => {
   });
 
   return (
-    <mesh ref={boxRef} position={position}>
+    <mesh ref={boxRef} position={position} castShadow>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color={color} />
     </mesh>
