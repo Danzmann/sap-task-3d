@@ -52,7 +52,6 @@ src/
     ├── getEnv.ts          # Get environment variables
 ├── App.tsx                # Main app entry point
 ├── index.tsx              # React DOM entry point
-├── App.css                # Global styles
 ```
 
 ## Usage
