@@ -39,14 +39,19 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
         .clone()
         .setHSL(baseColor.getHSL({}).h, 0.8, lightness);
 
-      return { position, color: shade };
+      return { position, color: shade, delay: 0.0001 * i };
     });
   }, [radius, numBoxes, baseColor]);
 
   return (
     <group ref={groupRef} {...props}>
-      {boxes.map(({ position, color }, index) => (
-        <RotatingBox key={index} position={position} color={color} />
+      {boxes.map(({ position, color, delay }, index) => (
+        <RotatingBox
+          key={index}
+          position={position}
+          color={color}
+          delay={delay}
+        />
       ))}
     </group>
   );
@@ -55,13 +60,25 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
 interface RotatingBoxProps {
   position: [number, number, number];
   color: THREE.Color;
+  delay: number;
 }
 
-const RotatingBox: React.FC<RotatingBoxProps> = ({ position, color }) => {
+const RotatingBox: React.FC<RotatingBoxProps> = ({
+  position,
+  color,
+  delay,
+}) => {
+  console.log(delay);
   const boxRef = useRef<THREE.Mesh>();
+  const scale = useRef(0);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (boxRef.current) {
+      // Introduce a delay before starting the scale animation
+      const elapsedTime = THREE.MathUtils.clamp(delta - delay, 0, 1);
+      scale.current = THREE.MathUtils.lerp(scale.current, 1, elapsedTime);
+      boxRef.current.scale.set(scale.current, scale.current, scale.current);
+
       boxRef.current.rotation.z += ROTATE_SPEED;
     }
   });
