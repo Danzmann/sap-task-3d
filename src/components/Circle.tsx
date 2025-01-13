@@ -1,16 +1,29 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { GroupProps, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import debounce from 'lodash.debounce';
 
-import { ROTATE_SPEED } from '../utils/constants.tsx';
+import {
+  ROTATE_SPEED,
+  ONCLICK_JUMP_PERCENTAGE,
+  ONCLICK_ROTATE_SPEED_MULTIPLIER,
+} from '../utils/constants.ts';
+import boxesGenerator from '../utils/boxesGenerator.ts';
+
 import RotatingBox from './RotatingBox.tsx';
 
 interface CircleProps extends GroupProps {
   radius: number;
   numBoxes: number;
+  lowGraphics: boolean;
 }
 
-const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
+const Circle: React.FC<CircleProps> = ({
+  radius,
+  numBoxes,
+  lowGraphics,
+  ...props
+}) => {
   const groupRef = useRef<THREE.Group>();
   const [hovered, setHovered] = useState(false);
   const [currentSpeed, setCurrentSpeed] = useState(ROTATE_SPEED); // Dynamic rotation speed
@@ -37,11 +50,11 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
   const handleClick = () => {
     if (groupRef.current) {
       const currentRotation = groupRef.current.rotation.z;
-      const jumpAngle = (2 * Math.PI) / 3; // 1/3 of a full circle at each click
+      const jumpAngle = (ONCLICK_JUMP_PERCENTAGE / 100) * (Math.PI * 2); // Calculate angle from percentage
       const newTarget = currentRotation + jumpAngle;
 
       setTargetRotation(newTarget);
-      setCurrentSpeed(ROTATE_SPEED * 20);
+      setCurrentSpeed(ROTATE_SPEED * ONCLICK_ROTATE_SPEED_MULTIPLIER);
     }
   };
 
@@ -50,32 +63,32 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
     [],
   );
 
-  // Generate positions and (smoothly transitioning :D ) colors for the boxes
-  const boxes = useMemo(() => {
-    return Array.from({ length: numBoxes }, (_, i) => {
-      const angle = (i / numBoxes) * Math.PI * 2;
-      const position = [
-        Math.cos(angle) * radius,
-        Math.sin(angle) * radius,
-        0, // needed for flat cirlce
-      ];
+  const boxes = useMemo(
+    () => boxesGenerator(numBoxes, radius, baseColor),
+    [radius, numBoxes, baseColor],
+  );
 
-      // Instead of a flat progression, I use a sinusoidal function for a smooth lightness transitions
-      const lightness = 0.5 + 0.4 * Math.sin((i / numBoxes) * Math.PI * 2);
-      const shade = baseColor
-        .clone()
-        .setHSL(baseColor.getHSL({}).h, 0.8, lightness);
+  const handleHoverDebounced = useCallback(
+    debounce((hovering: boolean) => setHovered(hovering), 100),
+    [],
+  );
 
-      return { position, color: shade, delay: 0.0001 * i };
-    });
-  }, [radius, numBoxes, baseColor]);
+  const handlePointerOver = () => {
+    handleHoverDebounced(true);
+    document.body.style.cursor = 'pointer';
+  };
+
+  const handlePointerOut = () => {
+    handleHoverDebounced(false);
+    document.body.style.cursor = 'default';
+  };
 
   return (
     <group
       ref={groupRef}
       scale={hovered ? 1.1 : 1}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
       onPointerDown={handleClick} // Trigger the jump on click
       {...props}
     >
@@ -85,8 +98,7 @@ const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
           position={position}
           color={color}
           delay={delay}
-          onHoverStart={() => setHovered(true)}
-          onHoverEnd={() => setHovered(false)}
+          lowGraphics={lowGraphics}
         />
       ))}
     </group>
