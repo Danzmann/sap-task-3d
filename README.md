@@ -1,6 +1,6 @@
-# 3D Rotating Circles Application
+# 3D Rotating Circles Application Test Task for SAP
 
-This is a React-based 3D application that renders a cylinder-like structure of rotating circles, where each circle consists of evenly spaced, independently rotating boxes. The project uses **React Three Fiber** for 3D rendering and includes interactive features such as hover effects, dynamic box/circle controls, and a "jump" functionality for smooth animations.
+This is a React-based 3D application that renders a cylinder-like structure of rotating circles, where each circle consists of evenly spaced, independently rotating boxes. The project uses **React Three Fiber** and includes interactive features such as hover effects, dynamic box/circle controls, and a "jump" functionality.
 
 ## Features
 
