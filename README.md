@@ -73,7 +73,8 @@ src/
 - Pixel ratio: Devices with limited GPU computation have reduced rendering resolution.
 - Low Quality Switch: In the leva controls the user can switch on low quality mode with basic mesh instead of standard
 
-## Future Improvements
+## Future Improvements/Issues
+- Handle hovering over two different circles simultaneously (only first circle hovered should be detected and hover not propagate)
 - Implement smooth acceleration and deceleration for the jump functionality. 
 - Add animations for boxes disappearing.
   - The animation for disappearing would require changes to the code to handle logic being executed
