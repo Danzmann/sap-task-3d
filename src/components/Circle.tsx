@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { GroupProps, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import debounce from 'lodash.debounce';
@@ -8,49 +8,101 @@ import {
   ONCLICK_JUMP_PERCENTAGE,
   ONCLICK_ROTATE_SPEED_MULTIPLIER,
 } from '../utils/constants.ts';
-import boxesGenerator from '../utils/boxesGenerator.ts';
-
-import RotatingBox from './RotatingBox.tsx';
 
 interface CircleProps extends GroupProps {
   radius: number;
   numBoxes: number;
-  lowGraphics: boolean;
 }
 
-const Circle: React.FC<CircleProps> = ({
-  radius,
-  numBoxes,
-  lowGraphics,
-  ...props
-}) => {
+const Circle: React.FC<CircleProps> = ({ radius, numBoxes, ...props }) => {
   const groupRef = useRef<THREE.Group>();
-  const [hovered, setHovered] = useState(false);
-  const [currentSpeed, setCurrentSpeed] = useState(ROTATE_SPEED); // Dynamic rotation speed
-  const [targetRotation, setTargetRotation] = useState<number | null>(null); // Target rotation for jumping
+  const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
+  const [hoveredBoxIndex, setHoveredBoxIndex] = useState<number | null>(null);
+  const [currentSpeed, setCurrentSpeed] = useState(ROTATE_SPEED);
+  const [targetRotation, setTargetRotation] = useState<number | null>(null);
 
-  useFrame(() => {
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  // Initialize and update box positions and colors
+  useEffect(() => {
+    if (instancedMeshRef.current) {
+      const mesh = instancedMeshRef.current;
+      const baseColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+
+      for (let i = 0; i < numBoxes; i++) {
+        const angle = (i / numBoxes) * Math.PI * 2;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+
+        // Set position and scale for each box
+        dummy.position.set(x, y, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+
+        // Set color
+        const lightness = 0.5 + 0.4 * Math.sin((i / numBoxes) * Math.PI * 2);
+        const shade = baseColor.clone().setHSL(baseColor.getHSL({}).h, 0.8, lightness);
+        mesh.setColorAt(i, shade);
+      }
+
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+  }, [numBoxes, radius, dummy]);
+
+  // Rotation logic using delta time
+  useFrame((_, delta) => {
     if (groupRef.current) {
-      if (!hovered && targetRotation === null) {
-        groupRef.current.rotation.z += currentSpeed;
-      } else if (targetRotation !== null) {
-        groupRef.current.rotation.z += currentSpeed;
+      const group = groupRef.current;
+
+      // Normal rotation if no hover or jump is active
+      if (!hoveredBoxIndex && targetRotation === null) {
+        group.rotation.z += currentSpeed * delta;
+      }
+
+      // Handle jump rotation
+      if (targetRotation !== null) {
+        group.rotation.z += currentSpeed * delta;
 
         if (
-          (currentSpeed > 0 && groupRef.current.rotation.z >= targetRotation) ||
-          (currentSpeed < 0 && groupRef.current.rotation.z <= targetRotation)
+          (currentSpeed > 0 && group.rotation.z >= targetRotation) ||
+          (currentSpeed < 0 && group.rotation.z <= targetRotation)
         ) {
-          setCurrentSpeed(ROTATE_SPEED); // Reset speed to normal
-          setTargetRotation(null); // Stop the jump
+          setCurrentSpeed(ROTATE_SPEED);
+          setTargetRotation(null);
         }
       }
     }
   });
 
-  const handleClick = () => {
-    if (groupRef.current) {
+  // Debounced hover handler
+  const handleHoverDebounced = useCallback(
+    debounce((instanceId: number | null) => setHoveredBoxIndex(instanceId), 100),
+    []
+  );
+
+  const handlePointerMove = (event: any) => {
+    const intersections = event.intersections;
+
+    if (intersections.length > 0) {
+      const instanceId = intersections[0].instanceId;
+      if (instanceId !== undefined && instanceId !== hoveredBoxIndex) {
+        handleHoverDebounced(instanceId);
+        document.body.style.cursor = 'pointer';
+      }
+    }
+  };
+
+  const handlePointerOut = () => {
+    handleHoverDebounced(null);
+    document.body.style.cursor = 'default';
+  };
+
+  const handlePointerDown = () => {
+    if (groupRef.current && targetRotation === null) {
       const currentRotation = groupRef.current.rotation.z;
-      const jumpAngle = (ONCLICK_JUMP_PERCENTAGE / 100) * (Math.PI * 2); // Calculate angle from percentage
+      const jumpAngle = (ONCLICK_JUMP_PERCENTAGE / 100) * (Math.PI * 2);
       const newTarget = currentRotation + jumpAngle;
 
       setTargetRotation(newTarget);
@@ -58,49 +110,23 @@ const Circle: React.FC<CircleProps> = ({
     }
   };
 
-  const baseColor = useMemo(
-    () => new THREE.Color(Math.random(), Math.random(), Math.random()),
-    [],
-  );
-
-  const boxes = useMemo(
-    () => boxesGenerator(numBoxes, radius, baseColor),
-    [radius, numBoxes, baseColor],
-  );
-
-  const handleHoverDebounced = useCallback(
-    debounce((hovering: boolean) => setHovered(hovering), 100),
-    [],
-  );
-
-  const handlePointerOver = () => {
-    handleHoverDebounced(true);
-    document.body.style.cursor = 'pointer';
-  };
-
-  const handlePointerOut = () => {
-    handleHoverDebounced(false);
-    document.body.style.cursor = 'default';
-  };
-
   return (
     <group
       ref={groupRef}
-      scale={hovered ? 1.1 : 1}
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
-      onPointerDown={handleClick} // Trigger the jump on click
       {...props}
+      onPointerMove={handlePointerMove}
+      onPointerOut={handlePointerOut}
+      onPointerDown={handlePointerDown}
     >
-      {boxes.map(({ position, color, delay }, index) => (
-        <RotatingBox
-          key={index}
-          position={position}
-          color={color}
-          delay={delay}
-          lowGraphics={lowGraphics}
-        />
-      ))}
+      <instancedMesh
+        ref={instancedMeshRef}
+        args={[null, null, numBoxes]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial />
+      </instancedMesh>
     </group>
   );
 };

@@ -1,4 +1,4 @@
-export const ROTATE_SPEED = 0.005;
+export const ROTATE_SPEED = 0.5;
 export const BOXES_GENERATION_ANIMATION_DELAY = 0.0005;
 export const ONCLICK_JUMP_PERCENTAGE = 33.33; // percentage of the circle trajectory to jump on user click
 export const ONCLICK_ROTATE_SPEED_MULTIPLIER = 20; // how fast the circle travels on jump
